@@ -1,0 +1,103 @@
+---
+title: "Propensity Score Weighting"
+subtitle: "using machine learning"
+author: |
+  | [Young Geun Kim](mailto:dudrms33@g.skku.edu)
+  | [ygeunkim.github.io](https://ygeunkim.github.io)
+institute: "2019711358, [Department of Statistics](https://stat.skku.edu/stat/index.jsp)"
+date: "`r format(Sys.time(), '%d %b, %Y')`"
+bibliography: "../docs/prop.bib"
+output: 
+  xaringan::moon_reader:
+    nature:
+      highlightLines: true
+      highlightStyle: github
+knit:
+  (function(inputFile, encoding) {
+    rmarkdown::render(input = inputFile, encoding = encoding, output_dir = "../static/slides")
+  })
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{hyperref}
+  - \usepackage{enumitem}
+  - \usepackage[boxruled, linesnumbered]{algorithm2e}
+  - \IncMargin{1.5em}
+  - \newcommand{\iid}{\stackrel{iid}{\sim}}
+  - \newcommand{\indep}{\stackrel{indep}{\sim}}
+  - \newcommand{\hsim}{\stackrel{H_0}{\sim}}
+  - \newcommand{\ind}{\perp\!\!\!\perp}
+  - \newcommand{\R}{\mathbb{R}}
+  - \newcommand{\B}{\boldsymbol\beta}
+  - \newcommand{\hb}{\boldsymbol{\hat\beta}}
+  - \newcommand{\E}{\boldsymbol\epsilon}
+  - \newcommand{\defn}{\mathpunct{:}=}
+  - \DeclareMathOperator*{\argmin}{argmin}
+  - \DeclareMathOperator*{\argmax}{argmax}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  out.width = "70%",
+  fig.align = "center",
+  fig.width = 6,
+  fig.asp = .618,
+  fig.pos = "H"
+  )
+knitr::knit_hooks$set(
+  document = function(x) {
+    sub("\\usepackage[]{color}", "\\usepackage{xcolor}", x, fixed = TRUE)
+  }
+)
+options(digits = 3)
+options(kableExtra.latex.load_packages = FALSE)
+is_latex <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "latex"
+is_beamer <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer"
+# cite-------------------
+library(RefManageR)
+bib <- ReadBib("../docs/prop.bib")
+Citet(bib, "cmm")
+```
+
+
+# Reviewed Paper
+
+```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'}
+PrintBibliography(bib)
+```
+
+--
+
+Instead of logistic regression:
+
+- CART
+- Pruned CART
+- Bagged CART
+- Random forests
+- Boosted CART
+
+--
+
+Simulation study
+
+
+---
+
+
+
+
