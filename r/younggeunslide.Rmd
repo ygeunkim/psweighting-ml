@@ -68,14 +68,27 @@ options(digits = 3)
 options(kableExtra.latex.load_packages = FALSE)
 is_latex <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "latex"
 is_beamer <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer"
-# cite-------------------
+```
+
+```{r, message=FALSE, echo=FALSE}
+# tidyverse family---------------------
+# cite---------------------------------
 library(RefManageR)
+# set seed for report -----------------
+set.seed(1)
+```
+
+```{r, include=FALSE}
+# bibtex------------------------------
 bib <- ReadBib("../docs/prop.bib")
+```
+
+# Reviewed Paper
+
+```{r, include=FALSE}
 Citet(bib, "cmm")
 ```
 
-
-# Reviewed Paper
 
 ```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'}
 PrintBibliography(bib)
@@ -85,18 +98,69 @@ PrintBibliography(bib)
 
 Instead of logistic regression:
 
-- CART
-- Pruned CART
-- Bagged CART
 - Random forests
-- Boosted CART
+- CART
+- SVM
+
+```{r}
+library(propensityml)
+```
+
+See [https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml).
+
+---
+
+## Simulation study
+
+```{r, include=FALSE}
+Citet(bib, "utg")
+```
+
+```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'}
+PrintBibliography(bib, start = 2)
+```
+
 
 --
 
-Simulation study
+- Confounders
+- Exposure predictors
+- Outcome predictors
 
+```{r}
+sim_covariate(1000, covmat = build_covariate())
+```
 
 ---
+
+## Scenarios
+
+1. Additivity and linearity
+2. Mild non-linearity: 1 quadratic term
+3. Moderate non-linearity: 3 quadratic term
+4. Mild non-additivity: 3 two-way interaction terms
+5. Mild non-additivity and non-linearity: 3 two-way interaction terms and 1 quadratic term
+6. Moderate non-linearity: 10 two-way interaction terms
+7. Moderate non-additivity and non-linearity: 10 two-way interaction terms and 3 quadratic terms
+
+## Small, Medium, and Large-sized Sets
+
+```{r}
+# n = 500
+small <- sim_outcome(500, covmat = build_covariate())
+# n = 1000
+medium <- sim_outcome(1000, covmat = build_covariate())
+# n = 2000
+large <- sim_outcome(2000, covmat = build_covariate())
+```
+
+---
+
+# Evaluation
+
+
+
+
 
 
 
