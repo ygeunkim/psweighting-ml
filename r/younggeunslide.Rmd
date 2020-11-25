@@ -7,11 +7,16 @@ author: |
 institute: "2019711358, [Department of Statistics](https://stat.skku.edu/stat/index.jsp)"
 date: "`r format(Sys.time(), '%d %b, %Y')`"
 bibliography: "../docs/prop.bib"
+biblio-style: "apalike"
+link-citations: yes
 output: 
-  xaringan::moon_reader:
-    nature:
-      highlightLines: true
-      highlightStyle: github
+  beamer_presentation:
+    toc: yes
+    slide_level: 2
+    theme: "Montpellier"
+    colortheme: "beaver"
+    fonttheme: "structurebold"
+    citation_package: natbib
 knit:
   (function(inputFile, encoding) {
     rmarkdown::render(input = inputFile, encoding = encoding, output_dir = "../static/slides")
@@ -33,7 +38,6 @@ header-includes:
   - \usepackage{makecell}
   - \usepackage{xcolor}
   - \usepackage{hyperref}
-  - \usepackage{enumitem}
   - \usepackage[boxruled, linesnumbered]{algorithm2e}
   - \IncMargin{1.5em}
   - \newcommand{\iid}{\stackrel{iid}{\sim}}
@@ -72,89 +76,140 @@ is_beamer <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer"
 
 ```{r, message=FALSE, echo=FALSE}
 # tidyverse family---------------------
-# cite---------------------------------
-library(RefManageR)
+library(dplyr)
+# large data frame---------------------
+library(data.table)
+# parallel-----------------------------
+library(foreach)
 # set seed for report -----------------
 set.seed(1)
 ```
 
-```{r, include=FALSE}
-# bibtex------------------------------
-bib <- ReadBib("../docs/prop.bib")
-```
+# Introduction
 
-# Reviewed Paper
+## Reviewed Paper
 
-```{r, include=FALSE}
-Citet(bib, "cmm")
-```
+<!-- ```{r, include=FALSE} -->
+<!-- Citet(bib, "cmm") -->
+<!-- ``` -->
 
+<!-- ```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'} -->
+<!-- PrintBibliography(bib) -->
+<!-- ``` -->
 
-```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'}
-PrintBibliography(bib)
-```
+Reviewd and apply @cmm: estimate propensity score using
 
---
-
-Instead of logistic regression:
-
+- Logistic regression
 - Random forests
 - CART
 - SVM
 
-```{r}
+## Custom Package
+
+```{r, message=FALSE}
+# remotes::install_github("ygeunkim/propensityml")
 library(propensityml)
 ```
 
-See [https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml).
-
----
+```{r, echo=FALSE, out.width="30%"}
+knitr::include_graphics("../docs/logo.png")
+```
 
 ## Simulation study
 
-```{r, include=FALSE}
-Citet(bib, "utg")
+Simulation setting by @utg:
+
+- 10 covariates: confounders, exposure predictors, outcome predictors
+- Treatment
+- Outcome probability
+
+```{r, echo=FALSE, out.width="65%"}
+knitr::include_graphics("../docs/lee_fig1.jpeg")
 ```
-
-```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'}
-PrintBibliography(bib, start = 2)
-```
-
-
---
-
-- Confounders
-- Exposure predictors
-- Outcome predictors
-
-```{r}
-sim_covariate(1000, covmat = build_covariate())
-```
-
----
 
 ## Scenarios
 
 1. Additivity and linearity
-2. Mild non-linearity: 1 quadratic term
-3. Moderate non-linearity: 3 quadratic term
-4. Mild non-additivity: 3 two-way interaction terms
-5. Mild non-additivity and non-linearity: 3 two-way interaction terms and 1 quadratic term
-6. Moderate non-linearity: 10 two-way interaction terms
-7. Moderate non-additivity and non-linearity: 10 two-way interaction terms and 3 quadratic terms
+2. Mild non-linearity: *1 quadratic term*
+3. Moderate non-linearity: *3 quadratic term*
+4. Mild non-additivity: *3 two-way interaction terms*
+5. Mild non-additivity and non-linearity: *3 two-way interaction terms and 1 quadratic term*
+6. Moderate non-linearity: *10 two-way interaction terms*
+7. Moderate non-additivity and non-linearity: *10 two-way interaction terms and 3 quadratic terms*
 
-## Small, Medium, and Large-sized Sets
+## Function to reproduce @utg
 
+\footnotesize
 ```{r}
-# n = 500
-small <- sim_outcome(500, covmat = build_covariate())
-# n = 1000
-medium <- sim_outcome(1000, covmat = build_covariate())
-# n = 2000
-large <- sim_outcome(2000, covmat = build_covariate())
+sim_outcome(n = 1000, covmat = build_covariate()) %>% str()
 ```
 
----
+\normalsize
+
+# Propensity Score Estimation
+
+## Sample Size
+
+For simulation, 1000 replicates
+
+### Small: 500
+
+with 7 scenarios
+
+```{r, echo=FALSE, cache=TRUE}
+doMC::registerDoMC(cores = 4)
+small_list <- foreach(scenario = LETTERS[1:7], .combine = rbind) %dopar% {
+  mc_setoguchi(N = 1000, n_dat = 500, scenario = scenario, parallel = TRUE)[,
+                                                                            scenario := scenario]
+}
+```
+
+### Medium: 1000
+
+with 7 scenarios
+
+```{r, echo=FALSE, cache=TRUE}
+doMC::registerDoMC(cores = 4)
+medium_list <- foreach(scenario = LETTERS[1:7], .combine = rbind) %dopar% {
+  mc_setoguchi(N = 1000, n_dat = 1000, scenario = scenario, parallel = TRUE)[,
+                                                                             scenario := scenario]
+}
+```
+
+### Large: 2000
+
+with 7 scenarios
+
+```{r, echo=FALSE, cache=TRUE}
+doMC::registerDoMC(cores = 4)
+large_list <- foreach(scenario = LETTERS[1:7], .combine = rbind) %dopar% {
+  mc_setoguchi(N = 1000, n_dat = 2000, scenario = scenario, parallel = TRUE)[,
+                                                                             scenario := scenario]
+}
+```
+
+## Covariate Balance
+
+For example,
+
+\scriptsize
+```{r}
+compute_balance(
+  small_list[mcname == 1 & scenario == "A", -c("mcname", "scenario")],
+  treatment = "exposure", trt_indicator = 1, outcome = "outcome_prob"
+)
+```
+
+\normalsize
+Average(`balance`) = **Average standardized absolute mean distance** (ASAM).
+
+## Average standardized absolute mean distance (ASAM)
+
+- Evaluation
+- After applying weighting
+
+## Logistic Regression
+
 
 # Evaluation
 
@@ -162,6 +217,19 @@ large <- sim_outcome(2000, covmat = build_covariate())
 
 
 
+# Related Contents
+
+## About this project
+
+### Project repository
+
+[https://github.com/ygeunkim/psweighting-ml](https://github.com/ygeunkim/psweighting-ml)
+
+### Project package
+
+[https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml)
+
+# References
 
 
 
