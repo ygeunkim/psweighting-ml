@@ -1,32 +1,63 @@
-@article{cmm, 
-title = {{Improving propensity score weighting using machine learning}}, 
-author = {Lee, Brian K. and Lessler, Justin and Stuart, Elizabeth A.}, 
-journal = {Statistics in Medicine}, 
-issn = {1097-0258}, 
-doi = {10.1002/sim.3782}, 
-pmid = {19960510}, 
-pmcid = {PMC2807890}, 
-abstract = {{Machine learning techniques such as classification and regression trees (CART) have been suggested as promising alternatives to logistic regression for the estimation of propensity scores. The authors examined the performance of various CART-based propensity score models using simulated data. Hypothetical studies of varying sample sizes (n=500, 1000, 2000) with a binary exposure, continuous outcome, and 10 covariates were simulated under seven scenarios differing by degree of non-linear and non-additive associations between covariates and the exposure. Propensity score weights were estimated using logistic regression (all main effects), CART, pruned CART, and the ensemble methods of bagged CART, random forests, and boosted CART. Performance metrics included covariate balance, standard error, per cent absolute bias, and 95 per cent confidence interval (CI) coverage. All methods displayed generally acceptable performance under conditions of either non-linearity or non-additivity alone. However, under conditions of both moderate non-additivity and moderate non-linearity, logistic regression had subpar performance, whereas ensemble methods provided substantially better bias reduction and more consistent 95 per cent CI coverage. The results suggest that ensemble methods, especially boosted CART, may be useful for propensity score weighting. Copyright © 2009 John Wiley \& Sons, Ltd.}}, 
-pages = {337--346}, 
-number = {3}, 
-volume = {29}, 
-keywords = {causal inference,weighting,machine learning,propensity score}, 
-local-url = {file://localhost/Users/ygeunkim/Documents/Papers%20Library/2010/Lee/Statistics%20in%20Medicine/Lee_Improving%20propensity%20score%20weighting%20using%20machine%20learning_Statistics%20in%20Medicine_2010.pdf}, 
-year = {2010}
-}
-@article{utg, 
-title = {{Evaluating uses of data mining techniques in propensity score estimation: a simulation study}}, 
-author = {Setoguchi, Soko and Schneeweiss, Sebastian and Brookhart, M. Alan and Glynn, Robert J. and Cook, E. Francis}, 
-journal = {Pharmacoepidemiology and Drug Safety}, 
-issn = {1099-1557}, 
-doi = {10.1002/pds.1555}, 
-pmid = {18311848}, 
-pmcid = {PMC2905676}, 
-abstract = {{In propensity score modeling, it is a standard practice to optimize the prediction of exposure status based on the covariate information. In a simulation study, we examined in what situations analyses based on various types of exposure propensity score (EPS) models using data mining techniques such as recursive partitioning (RP) and neural networks (NN) produce unbiased and/or efficient results. We simulated data for a hypothetical cohort study (n = 2000) with a binary exposure/outcome and 10 binary/continuous covariates with seven scenarios differing by non-linear and/or non-additive associations between exposure and covariates. EPS models used logistic regression (LR) (all possible main effects), RP1 (without pruning), RP2 (with pruning), and NN. We calculated c-statistics (C), standard errors (SE), and bias of exposure-effect estimates from outcome models for the PS-matched dataset. Data mining techniques yielded higher C than LR (mean: NN, 0.86; RPI, 0.79; RP2, 0.72; and LR, 0.76). SE tended to be greater in models with higher C. Overall bias was small for each strategy, although NN estimates tended to be the least biased. C was not correlated with the magnitude of bias (correlation coefficient [COR] = −0.3, p = 0.1) but increased SE (COR = 0.7, p < 0.001). Effect estimates from EPS models by simple LR were generally robust. NN models generally provided the least numerically biased estimates. C was not associated with the magnitude of bias but was with the increased SE. Copyright © 2008 John Wiley \& Sons, Ltd.}}, 
-pages = {546--555}, 
-number = {6}, 
-volume = {17}, 
-keywords = {machine learning,propensity score,causal inference}, 
-local-url = {file://localhost/Users/ygeunkim/Documents/Papers%20Library/2008/Setoguchi/Pharmacoepidemiology%20and%20Drug%20Safety/Setoguchi_Evaluating%20uses%20of%20data%20mining%20techniques%20in%20propensity%20score%20estimation-%20a%20simulation%20study_Pharmacoepidemiology%20and%20Drug%20Safety_2008.pdf}, 
-year = {2008}
-}
+%% This BibTeX bibliography file was created using BibDesk.
+%% https://bibdesk.sourceforge.io/
+
+%% Created for 김영근 at 2020-11-30 13:02:37 +0900 
+
+
+%% Saved with string encoding Unicode (UTF-8) 
+
+
+
+@article{prmv,
+	abstract = {{The consistency of propensity score (PS) estimators relies on correct specification of the PS model. The PS is frequently estimated using main-effects logistic regression. However, the underlying model assumptions may not hold. Machine learning methods provide an alternative nonparametric approach to PS estimation. In this simulation study, we evaluated the benefit of using Super Learner (SL) for PS estimation. We created 1,000 simulated data sets (n = 500) under 4 different scenarios characterized by various degrees of deviance from the usual main-term logistic regression model for the true PS. We estimated the average treatment effect using PS matching and inverse probability of treatment weighting. The estimators' performance was evaluated in terms of PS prediction accuracy, covariate balance achieved, bias, standard error, coverage, and mean squared error. All methods exhibited adequate overall balancing properties, but in the case of model misspecification, SL performed better for highly unbalanced variables. The SL-based estimators were associated with the smallest bias in cases of severe model misspecification. Our results suggest that use of SL to estimate the PS can improve covariate balance and reduce bias in a meaningful manner in cases of serious model misspecification for treatment assignment.}},
+	author = {Pirracchio, Romain and Petersen, Maya L. and van der Laan, Mark},
+	date-added = {2020-11-30 13:01:19 +0900},
+	date-modified = {2020-11-30 13:02:04 +0900},
+	doi = {10.1093/aje/kwu253},
+	eprint = {https://academic.oup.com/aje/article-pdf/181/2/108/17342497/kwu253.pdf},
+	issn = {0002-9262},
+	journal = {American Journal of Epidemiology},
+	month = {12},
+	number = {2},
+	pages = {108-119},
+	title = {Improving Propensity Score Estimators' Robustness to Model Misspecification Using Super Learner},
+	url = {https://doi.org/10.1093/aje/kwu253},
+	volume = {181},
+	year = {2014},
+	Bdsk-Url-1 = {https://doi.org/10.1093/aje/kwu253}}
+
+@article{cmm,
+	abstract = {{Machine learning techniques such as classification and regression trees (CART) have been suggested as promising alternatives to logistic regression for the estimation of propensity scores. The authors examined the performance of various CART-based propensity score models using simulated data. Hypothetical studies of varying sample sizes (n=500, 1000, 2000) with a binary exposure, continuous outcome, and 10 covariates were simulated under seven scenarios differing by degree of non-linear and non-additive associations between covariates and the exposure. Propensity score weights were estimated using logistic regression (all main effects), CART, pruned CART, and the ensemble methods of bagged CART, random forests, and boosted CART. Performance metrics included covariate balance, standard error, per cent absolute bias, and 95 per cent confidence interval (CI) coverage. All methods displayed generally acceptable performance under conditions of either non-linearity or non-additivity alone. However, under conditions of both moderate non-additivity and moderate non-linearity, logistic regression had subpar performance, whereas ensemble methods provided substantially better bias reduction and more consistent 95 per cent CI coverage. The results suggest that ensemble methods, especially boosted CART, may be useful for propensity score weighting. Copyright {\copyright} 2009 John Wiley \& Sons, Ltd.}},
+	author = {Lee, Brian K. and Lessler, Justin and Stuart, Elizabeth A.},
+	doi = {10.1002/sim.3782},
+	issn = {1097-0258},
+	journal = {Statistics in Medicine},
+	keywords = {causal inference,weighting,machine learning,propensity score},
+	local-url = {file://localhost/Users/ygeunkim/Documents/Papers%20Library/2010/Lee/Statistics%20in%20Medicine/Lee_Improving%20propensity%20score%20weighting%20using%20machine%20learning_Statistics%20in%20Medicine_2010.pdf},
+	number = {3},
+	pages = {337--346},
+	pmcid = {PMC2807890},
+	pmid = {19960510},
+	title = {{Improving propensity score weighting using machine learning}},
+	volume = {29},
+	year = {2010},
+	Bdsk-File-1 = {YnBsaXN0MDDSAQIDBFxyZWxhdGl2ZVBhdGhZYWxpYXNEYXRhXxCXLi4vLi4vLi4vUGFwZXJzIExpYnJhcnkvMjAxMC9MZWUvU3RhdGlzdGljcyBpbiBNZWRpY2luZS9MZWVfSW1wcm92aW5nIHByb3BlbnNpdHkgc2NvcmUgd2VpZ2h0aW5nIHVzaW5nIG1hY2hpbmUgbGVhcm5pbmdfU3RhdGlzdGljcyBpbiBNZWRpY2luZV8yMDEwLnBkZk8RAvwAAAAAAvwAAgAADE1hY2ludG9zaCBIRAAAAAAAAAAAAAAAAAAAAAAAAABCRAAB/////x9MZWVfSW1wcm92aW5nIHByb3AjRkZGRkZGRkYucGRmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////AAAAAAAAAAAAAAAAAAMABQAACiBjdQAAAAAAAAAAAAAAAAAWU3RhdGlzdGljcyBpbiBNZWRpY2luZQACAKkvOlVzZXJzOnlnZXVua2ltOkRvY3VtZW50czpQYXBlcnMgTGlicmFyeToyMDEwOkxlZTpTdGF0aXN0aWNzIGluIE1lZGljaW5lOkxlZV9JbXByb3ZpbmcgcHJvcGVuc2l0eSBzY29yZSB3ZWlnaHRpbmcgdXNpbmcgbWFjaGluZSBsZWFybmluZ19TdGF0aXN0aWNzIGluIE1lZGljaW5lXzIwMTAucGRmAAAOAMAAXwBMAGUAZQBfAEkAbQBwAHIAbwB2AGkAbgBnACAAcAByAG8AcABlAG4AcwBpAHQAeQAgAHMAYwBvAHIAZQAgAHcAZQBpAGcAaAB0AGkAbgBnACAAdQBzAGkAbgBnACAAbQBhAGMAaABpAG4AZQAgAGwAZQBhAHIAbgBpAG4AZwBfAFMAdABhAHQAaQBzAHQAaQBjAHMAIABpAG4AIABNAGUAZABpAGMAaQBuAGUAXwAyADAAMQAwAC4AcABkAGYADwAaAAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgCnVXNlcnMveWdldW5raW0vRG9jdW1lbnRzL1BhcGVycyBMaWJyYXJ5LzIwMTAvTGVlL1N0YXRpc3RpY3MgaW4gTWVkaWNpbmUvTGVlX0ltcHJvdmluZyBwcm9wZW5zaXR5IHNjb3JlIHdlaWdodGluZyB1c2luZyBtYWNoaW5lIGxlYXJuaW5nX1N0YXRpc3RpY3MgaW4gTWVkaWNpbmVfMjAxMC5wZGYAABMAAS8AABUAAgAP//8AAAAIAA0AGgAkAL4AAAAAAAACAQAAAAAAAAAFAAAAAAAAAAAAAAAAAAADvg==},
+	Bdsk-Url-1 = {https://doi.org/10.1002/sim.3782}}
+
+@article{utg,
+	abstract = {{In propensity score modeling, it is a standard practice to optimize the prediction of exposure status based on the covariate information. In a simulation study, we examined in what situations analyses based on various types of exposure propensity score (EPS) models using data mining techniques such as recursive partitioning (RP) and neural networks (NN) produce unbiased and/or efficient results. We simulated data for a hypothetical cohort study (n = 2000) with a binary exposure/outcome and 10 binary/continuous covariates with seven scenarios differing by non-linear and/or non-additive associations between exposure and covariates. EPS models used logistic regression (LR) (all possible main effects), RP1 (without pruning), RP2 (with pruning), and NN. We calculated c-statistics (C), standard errors (SE), and bias of exposure-effect estimates from outcome models for the PS-matched dataset. Data mining techniques yielded higher C than LR (mean: NN, 0.86; RPI, 0.79; RP2, 0.72; and LR, 0.76). SE tended to be greater in models with higher C. Overall bias was small for each strategy, although NN estimates tended to be the least biased. C was not correlated with the magnitude of bias (correlation coefficient [COR] = −0.3, p = 0.1) but increased SE (COR = 0.7, p < 0.001). Effect estimates from EPS models by simple LR were generally robust. NN models generally provided the least numerically biased estimates. C was not associated with the magnitude of bias but was with the increased SE. Copyright {\copyright} 2008 John Wiley \& Sons, Ltd.}},
+	author = {Setoguchi, Soko and Schneeweiss, Sebastian and Brookhart, M. Alan and Glynn, Robert J. and Cook, E. Francis},
+	doi = {10.1002/pds.1555},
+	issn = {1099-1557},
+	journal = {Pharmacoepidemiology and Drug Safety},
+	keywords = {machine learning,propensity score,causal inference},
+	local-url = {file://localhost/Users/ygeunkim/Documents/Papers%20Library/2008/Setoguchi/Pharmacoepidemiology%20and%20Drug%20Safety/Setoguchi_Evaluating%20uses%20of%20data%20mining%20techniques%20in%20propensity%20score%20estimation-%20a%20simulation%20study_Pharmacoepidemiology%20and%20Drug%20Safety_2008.pdf},
+	number = {6},
+	pages = {546--555},
+	pmcid = {PMC2905676},
+	pmid = {18311848},
+	title = {{Evaluating uses of data mining techniques in propensity score estimation: a simulation study}},
+	volume = {17},
+	year = {2008},
+	Bdsk-File-1 = {YnBsaXN0MDDSAQIDBFxyZWxhdGl2ZVBhdGhZYWxpYXNEYXRhXxDgLi4vLi4vLi4vUGFwZXJzIExpYnJhcnkvMjAwOC9TZXRvZ3VjaGkvUGhhcm1hY29lcGlkZW1pb2xvZ3kgYW5kIERydWcgU2FmZXR5L1NldG9ndWNoaV9FdmFsdWF0aW5nIHVzZXMgb2YgZGF0YSBtaW5pbmcgdGVjaG5pcXVlcyBpbiBwcm9wZW5zaXR5IHNjb3JlIGVzdGltYXRpb24tIGEgc2ltdWxhdGlvbiBzdHVkeV9QaGFybWFjb2VwaWRlbWlvbG9neSBhbmQgRHJ1ZyBTYWZldHlfMjAwOC5wZGZPEQQAAAAAAAQAAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAAAAAAAAQkQAAf////8fU2V0b2d1Y2hpX0V2YWx1YXRpI0ZGRkZGRkZGLnBkZgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////wAAAAAAAAAAAAAAAAADAAUAAAogY3UAAAAAAAAAAAAAAAAAH1BoYXJtYWNvZXBpZGVtaW9sb2d5IGFuZCBEcnUjMUEAAAIA8i86VXNlcnM6eWdldW5raW06RG9jdW1lbnRzOlBhcGVycyBMaWJyYXJ5OjIwMDg6U2V0b2d1Y2hpOlBoYXJtYWNvZXBpZGVtaW9sb2d5IGFuZCBEcnVnIFNhZmV0eTpTZXRvZ3VjaGlfRXZhbHVhdGluZyB1c2VzIG9mIGRhdGEgbWluaW5nIHRlY2huaXF1ZXMgaW4gcHJvcGVuc2l0eSBzY29yZSBlc3RpbWF0aW9uLSBhIHNpbXVsYXRpb24gc3R1ZHlfUGhhcm1hY29lcGlkZW1pb2xvZ3kgYW5kIERydWcgU2FmZXR5XzIwMDgucGRmAA4BKgCUAFMAZQB0AG8AZwB1AGMAaABpAF8ARQB2AGEAbAB1AGEAdABpAG4AZwAgAHUAcwBlAHMAIABvAGYAIABkAGEAdABhACAAbQBpAG4AaQBuAGcAIAB0AGUAYwBoAG4AaQBxAHUAZQBzACAAaQBuACAAcAByAG8AcABlAG4AcwBpAHQAeQAgAHMAYwBvAHIAZQAgAGUAcwB0AGkAbQBhAHQAaQBvAG4ALQAgAGEAIABzAGkAbQB1AGwAYQB0AGkAbwBuACAAcwB0AHUAZAB5AF8AUABoAGEAcgBtAGEAYwBvAGUAcABpAGQAZQBtAGkAbwBsAG8AZwB5ACAAYQBuAGQAIABEAHIAdQBnACAAUwBhAGYAZQB0AHkAXwAyADAAMAA4AC4AcABkAGYADwAaAAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgDwVXNlcnMveWdldW5raW0vRG9jdW1lbnRzL1BhcGVycyBMaWJyYXJ5LzIwMDgvU2V0b2d1Y2hpL1BoYXJtYWNvZXBpZGVtaW9sb2d5IGFuZCBEcnVnIFNhZmV0eS9TZXRvZ3VjaGlfRXZhbHVhdGluZyB1c2VzIG9mIGRhdGEgbWluaW5nIHRlY2huaXF1ZXMgaW4gcHJvcGVuc2l0eSBzY29yZSBlc3RpbWF0aW9uLSBhIHNpbXVsYXRpb24gc3R1ZHlfUGhhcm1hY29lcGlkZW1pb2xvZ3kgYW5kIERydWcgU2FmZXR5XzIwMDgucGRmABMAAS8AABUAAgAP//8AAAAIAA0AGgAkAQcAAAAAAAACAQAAAAAAAAAFAAAAAAAAAAAAAAAAAAAFCw==},
+	Bdsk-Url-1 = {https://doi.org/10.1002/pds.1555}}

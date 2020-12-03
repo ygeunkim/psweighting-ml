@@ -2,3 +2,15 @@ base
 foreach
 propensityml
 data.table
+dplyr
+knitr
+kableExtra
+tidyverse
+ggplot2
+tibble
+tidyr
+readr
+purrr
+stringr
+forcats
+rmdtool
