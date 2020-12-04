@@ -95,14 +95,6 @@ set.seed(1)
 
 ## Reviewed Paper
 
-<!-- ```{r, include=FALSE} -->
-<!-- Citet(bib, "cmm") -->
-<!-- ``` -->
-
-<!-- ```{r, message=FALSE, echo=FALSE, comment=NULL, results='asis'} -->
-<!-- PrintBibliography(bib) -->
-<!-- ``` -->
-
 ### Estimation
 
 Reviewed and apply @cmm: estimate propensity score using
@@ -117,7 +109,7 @@ Reviewed and apply @cmm: estimate propensity score using
 - Emprical distribution of IPTW
 - IPW and SIPW
 
-## Custom Package
+## [My Own Package](https://github.com/ygeunkim/propensityml)
 
 ```{r, message=FALSE}
 # remotes::install_github("ygeunkim/propensityml")
@@ -128,15 +120,15 @@ library(propensityml)
 knitr::include_graphics("../docs/logo.png")
 ```
 
-## Simulation study
+## Simulation Study
 
 Simulation setting by @utg:
 
 - 10 covariates: confounders, exposure predictors, outcome predictors
-- Treatment, (true) treatment probability
+- Treatment (exposure), true propensity score
 - Continuous outcome
 
-```{r, setoguchifig, echo=FALSE, out.width="50%", fig.cap="Simulation Data"}
+```{r, setoguchifig, echo=FALSE, out.width="50%", fig.cap="Simulation Data - Each $W$ and $A$ can be as $X$ and $Z$ in the course, respectively"}
 knitr::include_graphics("../docs/lee_fig1.jpeg")
 ```
 
@@ -148,22 +140,31 @@ $$`r build_covariate()`$$
 
 ## Scenarios
 
-1. Additivity and linearity: $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7 \right))}$$
+### True propensity score
+
+Define $e(\mathbf{X}_i)$ for each scenario (`A`, `B`, `F`, `G`):
+
 <!-- 2. Mild non-linearity: *1 quadratic term* -->
-2. Moderate non-linearity: *3 quadratic term* $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7  + \beta_2 X_2^2 \right))}$$
 <!-- 4. Mild non-additivity: *3 two-way interaction terms* -->
 <!-- 5. Mild non-additivity and non-linearity: *3 two-way interaction terms and 1 quadratic term* -->
-3. Moderate non-linearity: *10 two-way interaction terms*
-4. Moderate non-additivity and non-linearity: *10 two-way interaction terms and 3 quadratic terms*
 
+\footnotesize
+\begin{itemize}
+  \item[A] Additivity and linearity: $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7 \right))}$$
+  \item[B] Moderate non-linearity: \textit{3 quadratic term} $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7  + \beta_2 X_2^2 \right))}$$
+  \item[F] Moderate non-linearity: \textit{10 two-way interaction terms}
+  \item[G] Moderate non-additivity and non-linearity: \textit{10 two-way interaction terms and 3 quadratic terms}
+\end{itemize}
+
+\normalsize
 ```{r, include=FALSE}
 scen <- c("A", "B", "F", "G")
 ```
 
-
-Here,
-
+### True Parameters
+\footnotesize
 $$(\beta_0, \beta_1, \ldots, \beta_7)^T = (`r c(0, 0.8, -0.25, 0.6, -0.4, -0.8, -0.5, 0.7)`)^T$$
+\normalsize
 
 ## Outcome
 
@@ -184,20 +185,6 @@ sim_outcome(n = 1000, covmat = build_covariate()) %>%
 
 \normalsize
 
-## Monte Carlo simulation
-
-- For simulation, 1000 replicates
-- Sample size: 1000
-
-```{r, smalldata, cache=TRUE}
-doMC::registerDoMC(cores = 4)
-mc_list <- mc_setoguchi(
-  N = 1000, n_dat = 1000, 
-  scenario = scen, 
-  parallel = TRUE
-)
-```
-
 <!-- # Propensity Score Estimation -->
 
 <!-- ## Covariate Balance -->
@@ -215,17 +202,31 @@ mc_list <- mc_setoguchi(
 
 <!-- \normalsize -->
 
-<!-- ## Logistic Regression -->
-<!-- ```{r} -->
-<!-- small_list %>%  -->
-<!--   add_propensity( -->
-<!--     formula = exposure ~ . - y,  -->
-<!--     method = "logit",  -->
-<!--     mc = c("mcname", "scenario") -->
-<!--   ) -->
-<!-- ``` -->
+# Simulation and Evaluation
 
-# Evaluation
+## Monte Carlo simulation
+
+- For simulation, 1000 replicates
+- Sample size: 1000
+
+\footnotesize
+```{r, smalldata, cache=TRUE}
+doMC::registerDoMC(cores = 4)
+mc_list <- mc_setoguchi(
+  N = 1000, n_dat = 1000, 
+  scenario = scen, 
+  parallel = TRUE
+)
+```
+
+\normalsize
+Columns that indicate MC and Scenario: `mcname`, `scenario`
+
+\tiny
+```{r}
+mc_list[, .N, .(mcname, scenario)]
+```
+\normalsize
 
 ## Average standardized absolute mean distance (ASAM)
 
@@ -348,7 +349,7 @@ iptw_svm_lin <-
 
 ## Empirical Distribution of IPTW
 
-```{r, include=FALSE, cache=TRUE}
+```{r, iptwemp, include=FALSE, cache=TRUE}
 col_name <- names(mc_list)
 iptw_dat <- 
   iptw_logit %>% 
@@ -668,6 +669,14 @@ emp_tab_sipw %>%
 ### Project package
 
 [https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml)
+
+## About the Machine
+
+\tiny
+```{r}
+sessionInfo()
+```
+\normalsize
 
 # References
 
