@@ -209,12 +209,11 @@ sim_outcome(n = 1000, covmat = build_covariate()) %>%
 - For simulation, 1000 replicates
 - Sample size: 1000
 
-\footnotesize
+\scriptsize
 ```{r, smalldata, cache=TRUE}
 doMC::registerDoMC(cores = 4)
 mc_list <- mc_setoguchi(
-  N = 1000, n_dat = 1000, 
-  scenario = scen, 
+  N = 1000, n_dat = 1000, scenario = scen, 
   parallel = TRUE
 )
 ```
@@ -263,7 +262,18 @@ svm_asam <-
   mc_list %>% 
   compute_asam(
     treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
-    formula = exposure ~ . - y - exposure_prob, method = "SVM",
+    formula = exposure ~ . - y - exposure_prob, 
+    method = "SVM", kernel = "radial",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+# svm (linear)---------------------------
+doMC::registerDoMC(cores = 8)
+svm_asam_lin <- 
+  mc_list %>% 
+  compute_asam(
+    treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
+    formula = exposure ~ . - y - exposure_prob, 
+    method = "SVM", kernel = "linear",
     mc_col = "mcname", sc_col = "scenario", parallel = TRUE
   )
 ```
@@ -274,14 +284,16 @@ svm_asam <-
 
 ```{r, lgrasamtab, echo=FALSE}
 logit_asam %>% 
-  merge(rf_asam, by = "scenario") %>% 
-  merge(svm_asam, by = "scenario") %>% 
+  setNames(c("scenario", "glm")) %>% 
+  merge(rf_asam %>% setNames(c("scenario", "rf")), by = "scenario") %>% 
+  merge(svm_asam_lin %>% setNames(c("scenario", "svmLin")), by = "scenario") %>%
+  merge(svm_asam %>% setNames(c("scenario", "svmRad")), by = "scenario") %>% 
   kable(
     format = "latex",
-    col.names = c("Scenarios", "Logistic regression", "Random forests", "SVM"),
-    escape = FALSE,
-    caption = "ASAM performance"
-  )
+    col.names = c("Scenarios", "Logistic", "RandomForests", "SVM (Linear)", "SVM (Radial)"),
+    escape = FALSE
+  ) %>% 
+  add_header_above(c(" " = 1, "Model" = 4))
 ```
 
 - Under 0.2 is acceptable [@cmm]
@@ -289,27 +301,28 @@ logit_asam %>%
 
 ## Effect estimator
 
-### Estimation of ATE
+### Estimation of Treatment Effect
 
 - Inverse probability of treatment weighing (IPTW): $$IPTW_i = \frac{Z_i}{\hat{e}_i} + \frac{1 - Z_i}{1 - \hat{e}_i}$$
-- Inverse probability weighting (IPW): weighted regression of outcome on treatment $\hat\Delta_{IPW}$
+- Weight 1 vs $\frac{\hat{e}_i}{1 - \hat{e}_i}$: $$Z_i - \frac{\hat{e}_i (1 - Z_i)}{1 - \hat{e}_i}$$
+- Inverse probability weighting (IPW): $\hat\Delta_{IPW}$
 - Stabilized inverse probability weighting (SIPW): $\hat\Delta_{SIPW}$
 
 ### Evaluation
 
 - Empirical distribution
-    - Histogram
+    - Histogram or boxplot
     - Bias: difference between true effect ($\gamma = - 0.4$)
     - Standard deviation
-    - Confidence interval
+    - 95% Confidence interval
 
 ## Inverse Probability of Treatment Weighing
 
 ```{r, logitiptw, cache=TRUE}
 doMC::registerDoMC(cores = 8)
-iptw_logit <- 
+wt_logit <- 
   mc_list %>% 
-  add_iptw(
+  add_weighting(
     treatment = "exposure",
     formula = exposure ~ . - y - exposure_prob, method = "logit",
     mc_col = "mcname", sc_col = "scenario", parallel = TRUE
@@ -319,27 +332,27 @@ iptw_logit <-
 ```{r, mliptw, echo=FALSE, cache=TRUE}
 # rf--------------------------
 doMC::registerDoMC(cores = 8)
-iptw_rf <- 
+wt_rf <- 
   mc_list %>% 
-  add_iptw(
+  add_weighting(
     treatment = "exposure",
     formula = exposure ~ . - y - exposure_prob, method = "rf",
     mc_col = "mcname", sc_col = "scenario", parallel = TRUE
   )
 # SVM (radial)-------------------------
 doMC::registerDoMC(cores = 8)
-iptw_svm <- 
+wt_svm <- 
   mc_list %>% 
-  add_iptw(
+  add_weighting(
     treatment = "exposure",
     formula = exposure ~ . - y - exposure_prob, method = "SVM",
     mc_col = "mcname", sc_col = "scenario", parallel = TRUE
   )
 # SVM (linear)-------------------------
 doMC::registerDoMC(cores = 8)
-iptw_svm_lin <- 
+wt_svm_lin <- 
   mc_list %>% 
-  add_iptw(
+  add_weighting(
     treatment = "exposure",
     formula = exposure ~ . - y - exposure_prob, 
     method = "SVM", kernel = "linear",
@@ -347,17 +360,109 @@ iptw_svm_lin <-
   )
 ```
 
+## Empirical Distribution of Propensity Scores
+
+```{r, psemp, include=FALSE, cache=TRUE}
+col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "svmRadial")
+ps_dat <- 
+  wt_logit[,-c("iptw", "propwt")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("iptw", "propwt")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("iptw", "propwt")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("iptw", "propwt")] %>% setNames(name_svm), by = col_name) %>%
+  melt(id.vars = col_name, variable.name = "model", value.name = "PS")
+# col_name <- names(mc_list)
+# ps_dat <- 
+#   iptw_logit[,-"iptw"] %>% 
+#   setNames(c(col_name, "glm")) %>% 
+#   merge(iptw_rf[,-"iptw"] %>% setNames(c(col_name, "randomForest")), by = col_name) %>%
+#   merge(iptw_svm_lin[,-"iptw"] %>% setNames(c(col_name, "svmLinear")), by = col_name) %>% 
+#   merge(iptw_svm[,-"iptw"] %>% setNames(c(col_name, "svmRadial")), by = col_name) %>%
+#   melt(id.vars = col_name, variable.name = "model", value.name = "PS")
+```
+
+
+<!-- ```{r, prophist, echo=FALSE, fig.cap="Empirical Distribution of Propensity Scores", warning=FALSE} -->
+<!-- ps_dat %>%  -->
+<!--   ggplot() + -->
+<!--   geom_histogram(aes(x = PS, y = ..density.., fill = model), alpha = .5, bins = 50) + -->
+<!--   theme(legend.position = "top", legend.title = element_blank()) + -->
+<!--   facet_grid(scenario ~ ., scales = "free_y") -->
+<!-- ``` -->
+
+```{r, prophist, echo=FALSE, fig.cap="Propensity Scores", warning=FALSE, cache=TRUE}
+ps_dat %>% 
+  ggplot() +
+  geom_boxplot(aes(x = model, y = PS, colour = model), outlier.size = .05, show.legend = FALSE) +
+  theme_minimal() +
+  labs(
+    x = element_blank(),
+    y = element_blank()
+  ) +
+  facet_grid(scenario ~ ., scales = "free_y") +
+  coord_flip()
+```
+
+## Commens about Propensity Scores
+
+What method leads to more extreme PS, i.e. close to 0 or 1?
+
+1. Random forest
+2. Logistic regression
+3. SVM (radial kernel)
+4. SVM (linear kernel)
+
+<!-- ```{r, pscontrolhist, echo=FALSE, fig.cap="Empirical Distribution of Propensity Scores for the Control", warning=FALSE} -->
+<!-- ps_dat[exposure == 0] %>%  -->
+<!--   ggplot() + -->
+<!--   geom_histogram(aes(x = PS, y = ..density.., fill = model), alpha = .5, bins = 50) + -->
+<!--   theme(legend.position = "top", legend.title = element_blank()) + -->
+<!--   facet_grid(scenario ~ ., scales = "free_y") -->
+<!-- ``` -->
+
 ## Empirical Distribution of IPTW
 
 ```{r, iptwemp, include=FALSE, cache=TRUE}
 col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "svmRadial")
 iptw_dat <- 
-  iptw_logit %>% 
-  setNames(c(col_name, "glm")) %>% 
-  merge(iptw_rf %>% setNames(c(col_name, "randomForest")), by = col_name) %>%
-  merge(iptw_svm_lin %>% setNames(c(col_name, "svmLinear")), by = col_name) %>% 
-  merge(iptw_svm %>% setNames(c(col_name, "svmRadial")), by = col_name) %>%
+  wt_logit[,-c("propensity", "propwt")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("propensity", "propwt")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("propensity", "propwt")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("propensity", "propwt")] %>% setNames(name_svm), by = col_name) %>%
   melt(id.vars = col_name, variable.name = "model", value.name = "IPTW")
+# col_name <- names(mc_list)
+# iptw_dat <- 
+#   iptw_logit[,-"propensity"] %>% 
+#   setNames(c(col_name, "glm")) %>% 
+#   merge(iptw_rf[,-"propensity"] %>% setNames(c(col_name, "randomForest")), by = col_name) %>%
+#   merge(iptw_svm_lin[,-"propensity"] %>% setNames(c(col_name, "svmLinear")), by = col_name) %>% 
+#   merge(iptw_svm[,-"propensity"] %>% setNames(c(col_name, "svmRadial")), by = col_name) %>%
+#   melt(id.vars = col_name, variable.name = "model", value.name = "IPTW")
 ```
 
 ```{r, iptwhist, echo=FALSE, fig.cap="Empirical Distribution of IPTW", warning=FALSE}
@@ -372,55 +477,102 @@ iptw_dat %>%
   facet_grid(scenario ~ ., scales = "free_y")
 ```
 
-## IPW and SIPW
+## Empirical Distribution of Weights for the Control Group
+
+```{r, propwtemp, echo=FALSE, cache=TRUE}
+col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "svmRadial")
+propwt_dat <- 
+  wt_logit[,-c("propensity", "iptw")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("propensity", "iptw")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("propensity", "iptw")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("propensity", "iptw")] %>% setNames(name_svm), by = col_name) %>%
+  melt(id.vars = col_name, variable.name = "model", value.name = "weight")
+```
+
+```{r, weighthist, echo=FALSE, fig.cap="Weights for the Control Group", warning=FALSE, error=TRUE, cache=TRUE}
+propwt_dat %>%
+  ggplot() +
+  geom_boxplot(aes(x = model, y = weight, colour = model), size = .1, outlier.size = .01, show.legend = FALSE) +
+  theme_minimal() +
+  labs(
+    x = element_blank(),
+    y = element_blank()
+  ) +
+  facet_grid(rows = vars(scenario)) +
+  coord_flip()
+```
+
+## Commens about Weights
+
+- Recall that extreme PS
+    1. Random forest
+    2. Logistic regression
+    3. SVM (radial kernel)
+    4. SVM (linear kernel)
+- This result is same in the weight.
+
+## SIPW
+
+<!-- \tiny -->
+<!-- ```{r, logitipw, cache=TRUE} -->
+<!-- doMC::registerDoMC(cores = 8) -->
+<!-- ipw_logit <-  -->
+<!--   mc_list %>%  -->
+<!--   compute_ipw( -->
+<!--     treatment = "exposure", outcome = "y", -->
+<!--     formula = exposure ~ . - y - exposure_prob,  -->
+<!--     method = "logit", -->
+<!--     mc_col = "mcname", sc_col = "scenario",  -->
+<!--     parallel = TRUE -->
+<!--   ) -->
+<!-- ``` -->
+
+<!-- ```{r, mlipw, echo=FALSE, cache=TRUE} -->
+<!-- # rf-------------------------- -->
+<!-- doMC::registerDoMC(cores = 8) -->
+<!-- ipw_rf <-  -->
+<!--   mc_list %>%  -->
+<!--   compute_ipw( -->
+<!--     treatment = "exposure", outcome = "y", -->
+<!--     formula = exposure ~ . - y - exposure_prob, method = "rf", -->
+<!--     mc_col = "mcname", sc_col = "scenario", parallel = TRUE -->
+<!--   ) -->
+<!-- # svm------------------------- -->
+<!-- doMC::registerDoMC(cores = 8) -->
+<!-- ipw_svm <-  -->
+<!--   mc_list %>%  -->
+<!--   compute_ipw( -->
+<!--     treatment = "exposure", outcome = "y", -->
+<!--     formula = exposure ~ . - y - exposure_prob, method = "SVM", -->
+<!--     mc_col = "mcname", sc_col = "scenario", parallel = TRUE -->
+<!--   ) -->
+<!-- # svm(linear)------------------------- -->
+<!-- doMC::registerDoMC(cores = 8) -->
+<!-- ipw_svm_lin <-  -->
+<!--   mc_list %>%  -->
+<!--   compute_ipw( -->
+<!--     treatment = "exposure", outcome = "y", -->
+<!--     formula = exposure ~ . - y - exposure_prob,  -->
+<!--     method = "SVM", kernel = "linear", -->
+<!--     mc_col = "mcname", sc_col = "scenario", parallel = TRUE -->
+<!--   ) -->
+<!-- ``` -->
 
 \tiny
-```{r, logitipw, cache=TRUE}
-doMC::registerDoMC(cores = 8)
-ipw_logit <- 
-  mc_list %>% 
-  compute_ipw(
-    treatment = "exposure", outcome = "y",
-    formula = exposure ~ . - y - exposure_prob, 
-    method = "logit",
-    mc_col = "mcname", sc_col = "scenario", 
-    parallel = TRUE
-  )
-```
-
-```{r, mlipw, echo=FALSE, cache=TRUE}
-# rf--------------------------
-doMC::registerDoMC(cores = 8)
-ipw_rf <- 
-  mc_list %>% 
-  compute_ipw(
-    treatment = "exposure", outcome = "y",
-    formula = exposure ~ . - y - exposure_prob, method = "rf",
-    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
-  )
-# svm-------------------------
-doMC::registerDoMC(cores = 8)
-ipw_svm <- 
-  mc_list %>% 
-  compute_ipw(
-    treatment = "exposure", outcome = "y",
-    formula = exposure ~ . - y - exposure_prob, method = "SVM",
-    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
-  )
-# svm(linear)-------------------------
-doMC::registerDoMC(cores = 8)
-ipw_svm_lin <- 
-  mc_list %>% 
-  compute_ipw(
-    treatment = "exposure", outcome = "y",
-    formula = exposure ~ . - y - exposure_prob, 
-    method = "SVM", kernel = "linear",
-    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
-  )
-```
-
-```{r, mlsipw, echo=FALSE, cache=TRUE}
-# glm-------------------------
+```{r, logitsipw, cache=TRUE}
 doMC::registerDoMC(cores = 8)
 sipw_logit <- 
   mc_list %>% 
@@ -429,6 +581,9 @@ sipw_logit <-
     formula = exposure ~ . - y - exposure_prob, method = "logit",
     mc_col = "mcname", sc_col = "scenario", parallel = TRUE
   )
+```
+
+```{r, mlsipw, echo=FALSE, cache=TRUE}
 # rf--------------------------
 doMC::registerDoMC(cores = 8)
 sipw_rf <- 
@@ -460,133 +615,128 @@ sipw_svm_lin <-
 ```
 
 \normalsize
-- weight of treatment: $1$
-- weight of control: $\frac{p_i}{1 - p_i}$
-- If $\hat{e}$ is proper
-    - then two weights are similar
-    - ATE estimate: difference of weighted means
 
-## Empirical Distribution of IPW
+<!-- ## Empirical Distribution of IPW -->
 
-```{r, include=FALSE}
-grp <- c("mcname", "scenario")
-ipw_dat <- 
-  ipw_logit %>% 
-  setNames(c(grp, "glm")) %>% 
-  merge(ipw_rf %>% setNames(c(grp, "randomForest")), by = grp) %>% 
-  merge(ipw_svm_lin %>% setNames(c(grp, "svmLinear")), by = grp) %>% 
-  merge(ipw_svm %>% setNames(c(grp, "svmRadial")), by = grp) %>% 
-  melt(id.vars = grp, variable.name = "model", value.name = "IPW")
-```
+<!-- ```{r, include=FALSE} -->
+<!-- grp <- c("mcname", "scenario") -->
+<!-- ipw_dat <-  -->
+<!--   ipw_logit %>%  -->
+<!--   setNames(c(grp, "glm")) %>%  -->
+<!--   merge(ipw_rf %>% setNames(c(grp, "randomForest")), by = grp) %>%  -->
+<!--   merge(ipw_svm_lin %>% setNames(c(grp, "svmLinear")), by = grp) %>%  -->
+<!--   merge(ipw_svm %>% setNames(c(grp, "svmRadial")), by = grp) %>%  -->
+<!--   melt(id.vars = grp, variable.name = "model", value.name = "IPW") -->
+<!-- ``` -->
 
-```{r, ipwhist, echo=FALSE, fig.cap="Empirical Distribution of IPW", warning=FALSE}
-ipw_dat %>% 
-  ggplot() +
-  geom_histogram(aes(x = IPW, y = ..density.., fill = model), alpha = .5, bins = 50) +
-  facet_grid(scenario ~ .) +
-  # theme_minimal() +
-  theme(legend.position = "top") +
-  labs(
-    fill = element_blank()
-  )
-```
+<!-- ```{r, ipwhist, echo=FALSE, fig.cap="Empirical Distribution of IPW", warning=FALSE} -->
+<!-- ipw_dat %>%  -->
+<!--   ggplot() + -->
+<!--   geom_histogram(aes(x = IPW, y = ..density.., fill = model), alpha = .5, bins = 50) + -->
+<!--   facet_grid(scenario ~ .) + -->
+<!--   # theme_minimal() + -->
+<!--   theme(legend.position = "top") + -->
+<!--   labs( -->
+<!--     fill = element_blank() -->
+<!--   ) -->
+<!-- ``` -->
 
-## Empirical Distribution of SIPW
+<!-- ## Empirical Distribution of SIPW -->
 
-```{r, include=FALSE}
-grp <- c("mcname", "scenario")
-sipw_dat <- 
-  ipw_logit %>% 
-  setNames(c(grp, "glm")) %>% 
-  merge(sipw_rf %>% setNames(c(grp, "randomForest")), by = grp) %>% 
-  merge(sipw_svm_lin %>% setNames(c(grp, "svmLinear")), by = grp) %>% 
-  merge(sipw_svm %>% setNames(c(grp, "svmRadial")), by = grp) %>% 
-  melt(id.vars = grp, variable.name = "model", value.name = "SIPW")
-```
+<!-- ```{r, include=FALSE} -->
+<!-- grp <- c("mcname", "scenario") -->
+<!-- sipw_dat <-  -->
+<!--   ipw_logit %>%  -->
+<!--   setNames(c(grp, "glm")) %>%  -->
+<!--   merge(sipw_rf %>% setNames(c(grp, "randomForest")), by = grp) %>%  -->
+<!--   merge(sipw_svm_lin %>% setNames(c(grp, "svmLinear")), by = grp) %>%  -->
+<!--   merge(sipw_svm %>% setNames(c(grp, "svmRadial")), by = grp) %>%  -->
+<!--   melt(id.vars = grp, variable.name = "model", value.name = "SIPW") -->
+<!-- ``` -->
 
-```{r, sipwhist, echo=FALSE, fig.cap="Empirical Distribution of SIPW", warning=FALSE}
-sipw_dat %>% 
-  ggplot() +
-  geom_histogram(aes(x = SIPW, y = ..density.., fill = model), alpha = .5, bins = 80) +
-  facet_grid(scenario ~ .) +
-  xlim(-10, 10) +
-  theme(legend.position = "top") +
-  labs(
-    fill = element_blank()
-  )
-```
+<!-- ```{r, sipwhist, echo=FALSE, fig.cap="Empirical Distribution of SIPW", warning=FALSE} -->
+<!-- sipw_dat %>%  -->
+<!--   ggplot() + -->
+<!--   geom_histogram(aes(x = SIPW, y = ..density.., fill = model), alpha = .5, bins = 80) + -->
+<!--   facet_grid(scenario ~ .) + -->
+<!--   xlim(-10, 10) + -->
+<!--   theme(legend.position = "top") + -->
+<!--   labs( -->
+<!--     fill = element_blank() -->
+<!--   ) -->
+<!-- ``` -->
 
-## Performance Metric of IPW
+<!-- ## Performance Metric of IPW -->
 
-```{r, echo=FALSE}
-emp_logit <- 
-  ipw_logit[,
-            .(
-              estimate_logit = mean(IPW),
-              bias_logit = mean(abs(IPW)) + .4,
-              sd_logit = sd(IPW),
-              mse_logit = mean((IPW + .4)^2)
-            ),
-            by = scenario]
-```
+<!-- ```{r, echo=FALSE} -->
+<!-- emp_logit <-  -->
+<!--   ipw_logit[, -->
+<!--             .( -->
+<!--               estimate_logit = mean(IPW), -->
+<!--               bias_logit = mean(abs(IPW)) + .4, -->
+<!--               sd_logit = sd(IPW), -->
+<!--               mse_logit = mean((IPW + .4)^2) -->
+<!--             ), -->
+<!--             by = scenario] -->
+<!-- ``` -->
 
 
-```{r, echo=FALSE}
-# rf-----------------------------
-emp_rf <- 
-  ipw_rf[,
-         .(
-           estimate_rf = mean(IPW),
-           bias_rf = mean(abs(IPW)) + .4,
-           sd_rf = sd(IPW),
-           mse_rf = mean((IPW + .4)^2)
-         ),
-         by = scenario]
-# svm(lin)---------------------------
-emp_svm_lin <- 
-  ipw_svm_lin[,
-              .(
-                estimate_svm = mean(IPW),
-                bias_svm = mean(abs(IPW)) + .4,
-                sd_svm = sd(IPW),
-                mse_svm = mean((IPW + .4)^2)
-              ),
-              by = scenario]
-# svm---------------------------
-emp_svm <- 
-  ipw_svm[,
-          .(
-            estimate_svm = mean(IPW),
-            bias_svm = mean(abs(IPW)) + .4,
-            sd_svm = sd(IPW),
-            mse_svm = mean((IPW + .4)^2)
-          ),
-          by = scenario]
-# merge------------------------
-emp_tab <-
-  emp_logit %>%
-  merge(emp_rf, by = "scenario") %>%
-  merge(emp_svm_lin, by = "scenario") %>%
-  merge(emp_svm, by = "scenario") %>%
-  melt(id.vars = "scenario") %>%
-  .[,
-    c("emp", "model") := tstrsplit(variable, "_", fixed = TRUE)] %>% 
-  .[,
-    variable := NULL] %>% 
-  dcast(emp + scenario ~ model)
-```
+<!-- ```{r, echo=FALSE} -->
+<!-- # rf----------------------------- -->
+<!-- emp_rf <-  -->
+<!--   ipw_rf[, -->
+<!--          .( -->
+<!--            estimate_rf = mean(IPW), -->
+<!--            bias_rf = mean(abs(IPW)) + .4, -->
+<!--            sd_rf = sd(IPW), -->
+<!--            mse_rf = mean((IPW + .4)^2) -->
+<!--          ), -->
+<!--          by = scenario] -->
+<!-- # svm(lin)--------------------------- -->
+<!-- emp_svm_lin <-  -->
+<!--   ipw_svm_lin[, -->
+<!--               .( -->
+<!--                 estimate_svm = mean(IPW), -->
+<!--                 bias_svm = mean(abs(IPW)) + .4, -->
+<!--                 sd_svm = sd(IPW), -->
+<!--                 mse_svm = mean((IPW + .4)^2) -->
+<!--               ), -->
+<!--               by = scenario] -->
+<!-- # svm--------------------------- -->
+<!-- emp_svm <-  -->
+<!--   ipw_svm[, -->
+<!--           .( -->
+<!--             estimate_svm = mean(IPW), -->
+<!--             bias_svm = mean(abs(IPW)) + .4, -->
+<!--             sd_svm = sd(IPW), -->
+<!--             mse_svm = mean((IPW + .4)^2) -->
+<!--           ), -->
+<!--           by = scenario] -->
+<!-- # merge------------------------ -->
+<!-- emp_tab <- -->
+<!--   emp_logit %>% -->
+<!--   merge(emp_rf, by = "scenario") %>% -->
+<!--   merge(emp_svm_lin, by = "scenario") %>% -->
+<!--   merge(emp_svm, by = "scenario") %>% -->
+<!--   melt(id.vars = "scenario") %>% -->
+<!--   .[, -->
+<!--     c("emp", "model") := tstrsplit(variable, "_", fixed = TRUE)] %>%  -->
+<!--   .[, -->
+<!--     variable := NULL] %>%  -->
+<!--   dcast(emp + scenario ~ model) -->
+<!-- ``` -->
 
-```{r, emptab, echo=FALSE, results='asis'}
-emp_tab %>% 
-  kable(
-    format = "latex",
-    col.names = c("Metric", "Scenarios", "Logistic regression", "Random forests", "SVM (Linear)", "SVM (Radial)"),
-    escape = FALSE
-  ) %>% 
-  kable_styling("striped", full_width = FALSE, latex_options = c("HOLD_position", "scale_down"), font_size = 5) %>% 
-  add_header_above(c(" " = 1, " " = 1, "Model" = 4)) %>% 
-  collapse_rows(columns = 1, valign = "top")
-```
+<!-- ```{r, emptab, echo=FALSE, results='asis'} -->
+<!-- emp_tab %>%  -->
+<!--   kable( -->
+<!--     format = "latex", -->
+<!--     col.names = c("Metric", "Scenarios", "Logistic regression", "Random forests", "SVM (Linear)", "SVM (Radial)"), -->
+<!--     escape = FALSE -->
+<!--   ) %>%  -->
+<!--   kable_styling("striped", full_width = FALSE, latex_options = c("HOLD_position", "scale_down"), font_size = 5) %>%  -->
+<!--   add_header_above(c(" " = 1, " " = 1, "Model" = 4)) %>%  -->
+<!--   collapse_rows(columns = 1, valign = "top") -->
+<!-- ``` -->
 
 ## Performance Metric of SIPW
 
@@ -672,10 +822,11 @@ emp_tab_sipw %>%
 
 ## About the Machine
 
-\tiny
+\small
 ```{r}
-sessionInfo()
+sessioninfo::session_info()[[1]]
 ```
+
 \normalsize
 
 # References
