@@ -303,7 +303,7 @@ logit_asam %>%
 
 ### Estimation of Treatment Effect
 
-- Inverse probability of treatment weighing (IPTW): $$IPTW_i = \frac{Z_i}{\hat{e}_i} + \frac{1 - Z_i}{1 - \hat{e}_i}$$
+- Inverse probability of treatment weighing (IPTW): $$IPTW_i = \frac{Z_i}{\hat{e}_i} - \frac{1 - Z_i}{1 - \hat{e}_i}$$
 - Weight 1 vs $\frac{\hat{e}_i}{1 - \hat{e}_i}$: $$Z_i - \frac{\hat{e}_i (1 - Z_i)}{1 - \hat{e}_i}$$
 
 ### Evaluation
@@ -312,7 +312,6 @@ logit_asam %>%
     - Histogram or boxplot
     - Bias: difference between true effect ($\gamma = - 0.4$)
     - Standard deviation
-    - 95% Confidence interval
 
 ## Average Treatment Effect
 
