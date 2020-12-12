@@ -1,0 +1,129 @@
+---
+title: "Propensity Score Weighting using Machine Learning"
+# subtitle: "using machine learning"
+author: |
+  | [Young Geun Kim](mailto:dudrms33@g.skku.edu)
+  | [ygeunkim.github.io](https://ygeunkim.github.io)
+  | 2019711358, [Department of Statistics](https://stat.skku.edu/stat/index.jsp)
+date: "`r format(Sys.time(), '%d %b, %Y')`"
+bibliography: "../docs/prop.bib"
+biblio-style: "apalike"
+link-citations: yes
+abstract: |
+  Generally, we estimate propensity score using logistic regression model. In this report, we try to implement machine learning methods - random forests and SVM. In some simulation scheme, we evaluate the result with averate standardized absolute mean distance and empirical distribution of average treatment effect. Additionally, we compare inverse probability weighting (IPW) with stabilized IPW. [We provide an R package for this experiment in this link](https://github.com/ygeunkim/propensityml).^[[https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml)]
+output: 
+  bookdown::pdf_document2:
+    toc: yes
+knit:
+  (function(inputFile, encoding) {
+    rmarkdown::render(input = inputFile, encoding = encoding, output_dir = "../static/report")
+  })
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{hyperref}
+  - \usepackage[boxruled, linesnumbered]{algorithm2e}
+  - \IncMargin{1.5em}
+  - \newcommand{\iid}{\stackrel{iid}{\sim}}
+  - \newcommand{\indep}{\stackrel{indep}{\sim}}
+  - \newcommand{\hsim}{\stackrel{H_0}{\sim}}
+  - \newcommand{\ind}{\perp\!\!\!\perp}
+  - \newcommand{\R}{\mathbb{R}}
+  - \newcommand{\B}{\boldsymbol\beta}
+  - \newcommand{\hb}{\boldsymbol{\hat\beta}}
+  - \newcommand{\E}{\boldsymbol\epsilon}
+  - \newcommand{\defn}{\mathpunct{:}=}
+  - \DeclareMathOperator*{\argmin}{argmin}
+  - \DeclareMathOperator*{\argmax}{argmax}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  out.width = "70%",
+  fig.align = "center",
+  fig.width = 6,
+  # fig.pos = "H",
+  fig.asp = .618
+  )
+knitr::knit_hooks$set(
+  document = function(x) {
+    sub("\\usepackage[]{color}", "\\usepackage{xcolor}", x, fixed = TRUE)
+  }
+)
+options(digits = 3)
+options(kableExtra.latex.load_packages = FALSE)
+is_latex <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "latex"
+is_beamer <- knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer"
+```
+
+```{r pkgs, message=FALSE, echo=FALSE}
+# tidyverse family---------------------
+library(tidyverse)
+# large data frame---------------------
+library(data.table)
+# parallel-----------------------------
+library(foreach)
+library(parallel)
+# custom packages----------------------
+library(rmdtool) # install_github("ygeunkim/rmdtool")
+# kable--------------------------------
+library(knitr)
+library(kableExtra)
+# set seed for report -----------------
+set.seed(1)
+```
+
+\newpage
+
+# Introduction
+
+```{r}
+library(propensityml)
+```
+
+
+# Monte Carlo Simulation
+
+## Setting
+
+## Evaluation
+
+# Conclusion
+
+\newpage
+
+# References {-}
+
+<div id="refs"></div>
+
+\newpage
+
+# (APPENDIX) Appendix {-}
+
+```{r get-labels, include=FALSE}
+lbs <- knitr::all_labels()
+lbs <- setdiff(lbs, c("setup", "get-labels", "pkgs"))
+```
+
+# Appendix: Codes
+
+## Loading Packages
+
+```{r ref.label="pkgs", echo=TRUE, eval=FALSE}
+```
+
