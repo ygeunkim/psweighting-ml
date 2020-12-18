@@ -10,7 +10,7 @@ bibliography: "../docs/prop.bib"
 biblio-style: "apalike"
 link-citations: yes
 abstract: |
-  Generally, we estimate propensity score using logistic regression model. In this report, we try to implement machine learning methods - random forests and SVM. In some simulation scheme, we evaluate the result with averate standardized absolute mean distance and empirical distribution of average treatment effect. Additionally, we compare inverse probability weighting (IPW) with stabilized IPW. [We provide an R package for this experiment in this link](https://github.com/ygeunkim/propensityml).^[[https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml)]
+  Generally, we estimate propensity score using logistic regression model. In this report, we try to implement machine learning methods - random forests and SVM. In some simulation scheme, we evaluate the result with averate standardized absolute mean distance and empirical distribution of average treatment effect. [We provide an R package for this experiment in this link](https://github.com/ygeunkim/propensityml).^[[https://github.com/ygeunkim/propensityml](https://github.com/ygeunkim/propensityml)]
 output: 
   bookdown::pdf_document2:
     toc: yes
@@ -90,20 +90,449 @@ set.seed(1)
 
 \newpage
 
-# Introduction
+# Introduction {#intro}
+
+Write propensity score $e(\mathbf{x})$ by
+
+$$e(\mathbf{x}) \defn P(Z = 1 \mid \mathbf{X} = \mathbf{x})$$
+
+In general, we estimate propensity scores via logistic regression model.
+
+\begin{equation}
+  \log \frac{e(\mathbf{x})}{1 - e(\mathbf{x})} = X \B
+  (\#eq:logitprop)
+\end{equation}
+
+Observe that covariates are linear. If this parametric model is wrong, the estimation can work bad. On the other hand, machine learning models sometimes can explain nonlinear or nonparametric situations. In this sense, we try to compare propensity score weighting from logistic with machine learning models.
+
+- Random forests [@Liaw:2002aa]: default values of the function
+- SVM [@Meyer:2020aa]: linear kernel and radial kernel
+
+In this report, we conduct Monte Carlo simulation. Section \@ref(mc) presents the structure of the simulation and evaluation. In Section \@ref{discuss}, we see the results of the simulation and discuss about them.
+
+For this work, we made an `R` package called `propensityml`. In each step, we try to introduce some function in this package.
 
 ```{r}
+# remotes::install_github("ygeunkim/propensityml")
 library(propensityml)
 ```
 
+# Monte Carlo Simulation {#mc}
 
-# Monte Carlo Simulation
+## Setting {#setting}
 
-## Setting
+We implement the Monte Carlo simulation setting of @cmm. They changed the outcome part of @utg. See Figure \@ref(fig:setoguchifig). There are 10 covariates - 4 confounders, 3 exposure predictors, and 3 outcome predictors. Now we generate true propensity score. Since we want to see whether logistic regression model properly works, we consider 4 scenarios. @cmm and @utg had actually tried 7, but we choose 4 due to computation limit. These 4 scenarios are similar to choice of @prmv.
 
-## Evaluation
+```{r, setoguchifig, echo=FALSE, fig.cap="Simulation Data - Each $W$ and $A$ can be as $X$ and $Z$ in the course, respectively"}
+knitr::include_graphics("../docs/lee_fig1.jpeg")
+```
 
-# Conclusion
+\begin{itemize}
+  \item[A] Additivity and linearity: $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7 \right))}$$
+  \item[B] Moderate non-linearity: \textit{3 quadratic term} $$P(Z = 1 \mid X_i) = \frac{1}{1 + \exp(- \left( \beta_0 + \beta_1 X_1 + \cdots + \beta_7 X_7  + \beta_2 X_2^2 \right))}$$
+  \item[F] Moderate non-linearity: \textit{10 two-way interaction terms}
+  \item[G] Moderate non-additivity and non-linearity: \textit{10 two-way interaction terms and 3 quadratic terms}
+\end{itemize}
+
+```{r, include=FALSE}
+scen <- c("A", "B", "F", "G")
+```
+
+Here, true parameters are $(\beta_0, \beta_1, \ldots, \beta_7)^T = (`r c(0, 0.8, -0.25, 0.6, -0.4, -0.8, -0.5, 0.7)`)^T$. Next, @cmm generate continuous outcome by
+
+$$Y = \alpha_0 + \alpha_1 X_1 + \cdots + \alpha_4 X_4 + \alpha_5 X_8 + \cdots + \alpha_7 X_{10} + \gamma Z$$
+
+where $(\alpha_0, \alpha_1, \ldots, \alpha_7)^T = (`r c(-3.85, 0.3, -0.36, -73, -0.2, 0.71, -0.19, 0.26)`)^T$ and the true effect is $\gamma = -0.4$.
+
+In `propensityml` package, `sim_outcome()` can reproduce dataset. Without this step. The following function generates dataset ready for MC simulation.
+
+```{r, smalldata, cache=TRUE}
+doMC::registerDoMC(cores = 4)
+mc_list <- mc_setoguchi(
+  N = 1000, n_dat = 1000, scenario = scen, 
+  parallel = TRUE
+)
+```
+
+Based on this setting, we generate 1000 replicates of datasets of which sample size is 1000.
+
+## Evaluation {#eval}
+
+Now we can estimate propensity score for each MC set. Here we introduce methods of evaluation.
+
+### Average standardized absolute mean distance (ASAM) {-}
+
+Recall that covariate balancing is computed by standardized mean difference. Average standardized abosulute mean distance (ASAM) is its average across all covariates. The lower, the more similar treatment and control groups are given covariates. We provide the code as follows:
+
+```{r, logitasam, cache=TRUE}
+doMC::registerDoMC(cores = 8)
+logit_asam <- 
+  mc_list %>% 
+  compute_asam(
+    treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
+    formula = exposure ~ . - y - exposure_prob, method = "logit",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+```
+
+
+```{r, mlasam, include=FALSE, cache=TRUE}
+# rf----------------------------
+doMC::registerDoMC(cores = 8)
+rf_asam <- 
+  mc_list %>% 
+  compute_asam(
+    treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
+    formula = exposure ~ . - y - exposure_prob, method = "rf",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+# svm---------------------------
+doMC::registerDoMC(cores = 8)
+svm_asam <- 
+  mc_list %>% 
+  compute_asam(
+    treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
+    formula = exposure ~ . - y - exposure_prob, 
+    method = "SVM", kernel = "radial",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+# svm (linear)---------------------------
+doMC::registerDoMC(cores = 8)
+svm_asam_lin <- 
+  mc_list %>% 
+  compute_asam(
+    treatment = "exposure", outcome = "y", exclude = "exposure_prob", 
+    formula = exposure ~ . - y - exposure_prob, 
+    method = "SVM", kernel = "linear",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+```
+
+### Effect Estimator {-}
+
+@cmm saw both ATE and ATC estimator. For ATE,
+
+\begin{equation}
+  \frac{Z_i}{\hat{e}_i} - \frac{1 - Z_i}{1 - \hat{e}_i}
+  (\#eq:ate)
+\end{equation}
+
+For ATC,
+
+\begin{equation}
+  Z_i - \frac{\hat{e}_i (1 - Z_i)}{1 - \hat{e}_i}
+  (\#eq:atc)
+\end{equation}
+
+Empirical distribution of these esitmators can be the evaluation.
+
+```{r, logitiptw, cache=TRUE}
+doMC::registerDoMC(cores = 8)
+wt_logit <- 
+  mc_list %>% 
+  add_weighting(
+    treatment = "exposure",
+    formula = exposure ~ . - y - exposure_prob, method = "logit",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+```
+
+```{r, mliptw, echo=FALSE, cache=TRUE}
+# rf--------------------------
+doMC::registerDoMC(cores = 8)
+wt_rf <- 
+  mc_list %>% 
+  add_weighting(
+    treatment = "exposure",
+    formula = exposure ~ . - y - exposure_prob, method = "rf",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+# SVM (radial)-------------------------
+doMC::registerDoMC(cores = 8)
+wt_svm <- 
+  mc_list %>% 
+  add_weighting(
+    treatment = "exposure",
+    formula = exposure ~ . - y - exposure_prob, method = "SVM",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+# SVM (linear)-------------------------
+doMC::registerDoMC(cores = 8)
+wt_svm_lin <- 
+  mc_list %>% 
+  add_weighting(
+    treatment = "exposure",
+    formula = exposure ~ . - y - exposure_prob, 
+    method = "SVM", kernel = "linear",
+    mc_col = "mcname", sc_col = "scenario", parallel = TRUE
+  )
+```
+
+# Results {#discuss}
+
+## ASAM {#asam}
+
+@cmm condered under 0.2 as balanced scenario. Table \@ref(tab:lgrasamtab) represents the result of ASAM computation. In every scenario, logistic regression shows the lowest value. @cmm mentioned about the skewed distribution despite about the low value.
+
+```{r, lgrasamtab, echo=FALSE}
+logit_asam %>% 
+  setNames(c("scenario", "glm")) %>% 
+  merge(rf_asam %>% setNames(c("scenario", "rf")), by = "scenario") %>% 
+  merge(svm_asam_lin %>% setNames(c("scenario", "svmLin")), by = "scenario") %>%
+  merge(svm_asam %>% setNames(c("scenario", "svmRad")), by = "scenario") %>% 
+  kable(
+    format = "latex",
+    col.names = c("Scenarios", "Logistic", "RF", "SVM (Linear)", "SVM (Radial)"),
+    escape = FALSE,
+    caption = "ASAM results"
+  ) %>% 
+  add_header_above(c(" " = 1, "Model" = 4))
+```
+
+## Effect Estimator
+
+### Propensity Score {-}
+
+In Figure \@ref(fig:prophist), empirical distribution of propensity score is prented. In every scenario, random forest leads to extreme estimates (0 or 1) of propensity scores. In scenario G, exceptionally, logistic regression also shows similar pattern.
+
+```{r, psemp, include=FALSE, cache=TRUE}
+col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("iptw", "propwt")]) %>% 
+  str_replace_all(pattern = "propensity", replacement = "svmRadial")
+ps_dat <- 
+  wt_logit[,-c("iptw", "propwt")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("iptw", "propwt")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("iptw", "propwt")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("iptw", "propwt")] %>% setNames(name_svm), by = col_name) %>%
+  melt(id.vars = col_name, variable.name = "model", value.name = "PS")
+```
+
+```{r, prophist, echo=FALSE, fig.cap="Empirical Distribution of Propensity Scores", warning=FALSE, cache=TRUE}
+ps_dat %>% 
+  ggplot() +
+  geom_boxplot(aes(x = model, y = PS, colour = model), outlier.size = .05, show.legend = FALSE) +
+  theme_minimal() +
+  labs(
+    x = element_blank(),
+    y = element_blank()
+  ) +
+  facet_grid(scenario ~ ., scales = "free_y") +
+  coord_flip()
+```
+
+### ATE {-}
+
+The pattern of propensity score affects estimation of effect.
+
+```{r, iptwemp, include=FALSE, cache=TRUE}
+col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("propensity", "propwt")]) %>% 
+  str_replace_all(pattern = "iptw", replacement = "svmRadial")
+iptw_dat <- 
+  wt_logit[,-c("propensity", "propwt")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("propensity", "propwt")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("propensity", "propwt")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("propensity", "propwt")] %>% setNames(name_svm), by = col_name) %>%
+  melt(id.vars = col_name, variable.name = "model", value.name = "IPTW")
+```
+
+```{r, iptwhist, echo=FALSE, fig.cap="Empirical Distribution of IPTW", warning=FALSE}
+iptw_dat %>% 
+  ggplot() +
+  geom_histogram(aes(x = IPTW, y = ..density.., fill = model), alpha = .5, bins = 50) +
+  theme(legend.position = "top", legend.title = element_blank()) +
+  # labs(
+  #   fill = element_blank()
+  # ) +
+  xlim(0, 10) +
+  facet_grid(scenario ~ ., scales = "free_y")
+```
+
+```{r, echo=FALSE}
+# glm---------------------------
+emp_logit_iptw <- 
+  wt_logit %>% 
+  .[,
+    .(
+      estimate_logit = mean(iptw),
+      bias_logit = mean(abs(iptw)) + .4,
+      sd_logit = sd(iptw),
+      mse_logit = mean((iptw + .4)^2)
+    ),
+    by = scenario]
+# rf-----------------------------
+emp_rf_iptw <- 
+  wt_rf %>% 
+  .[,
+    .(
+      estimate_rf = mean(iptw),
+      bias_rf = mean(abs(iptw)) + .4,
+      sd_rf = sd(iptw),
+      mse_rf = mean((iptw + .4)^2)
+    ),
+    by = scenario]
+# svm (lin)---------------------------
+emp_svm_lin_iptw <- 
+  wt_svm_lin %>% 
+  .[,
+    .(
+      estimate_svmlin = mean(iptw),
+      bias_svmlin = mean(abs(iptw)) + .4,
+      sd_svmlin = sd(iptw),
+      mse_svmlin = mean((iptw + .4)^2)
+    ),
+    by = scenario]
+# svm---------------------------
+emp_svm_iptw <- 
+  wt_svm %>% 
+  .[,
+    .(
+      estimate_svm = mean(iptw),
+      bias_svm = mean(abs(iptw)) + .4,
+      sd_svm = sd(iptw),
+      mse_svm = mean((iptw + .4)^2)
+    ),
+    by = scenario]
+# merge------------------------
+emp_tab_iptw <-
+  emp_logit_iptw %>%
+  merge(emp_rf_iptw, by = "scenario") %>%
+  merge(emp_svm_lin_iptw, by = "scenario") %>%
+  merge(emp_svm_iptw, by = "scenario") %>%
+  melt(id.vars = "scenario") %>%
+  .[,
+    c("emp", "model") := tstrsplit(variable, "_", fixed = TRUE)] %>% 
+  .[,
+    variable := NULL] %>% 
+  dcast(emp + scenario ~ model)
+```
+
+### ATC {-}
+
+```{r, propwtemp, echo=FALSE, cache=TRUE}
+col_name <- names(mc_list)
+name_logit <- 
+  names(wt_logit[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "glm")
+name_rf <- 
+  names(wt_rf[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "randomForest")
+name_svm_lin <- 
+  names(wt_svm_lin[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "svmLinear")
+name_svm <- 
+  names(wt_svm[,-c("propensity", "iptw")]) %>% 
+  str_replace_all(pattern = "propwt", replacement = "svmRadial")
+propwt_dat <- 
+  wt_logit[,-c("propensity", "iptw")] %>% 
+  setNames(name_logit) %>% 
+  merge(wt_rf[,-c("propensity", "iptw")] %>% setNames(name_rf), by = col_name) %>%
+  merge(wt_svm_lin[,-c("propensity", "iptw")] %>% setNames(name_svm_lin), by = col_name) %>% 
+  merge(wt_svm[,-c("propensity", "iptw")] %>% setNames(name_svm), by = col_name) %>%
+  melt(id.vars = col_name, variable.name = "model", value.name = "weight")
+```
+
+```{r, weighthist, echo=FALSE, fig.cap="Empirical Distribution of ATC Estimation", warning=FALSE, error=TRUE, cache=TRUE}
+propwt_dat %>%
+  ggplot() +
+  geom_boxplot(aes(x = model, y = weight, colour = model), size = .1, outlier.size = .01, show.legend = FALSE) +
+  theme_minimal() +
+  labs(
+    x = element_blank(),
+    y = element_blank()
+  ) +
+  facet_grid(rows = vars(scenario)) +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+# glm---------------------------
+emp_logit_wt <- 
+  wt_logit %>% 
+  .[,
+    .(
+      estimate_logit = mean(propwt),
+      bias_logit = mean(abs(propwt)) + .4,
+      sd_logit = sd(propwt),
+      mse_logit = mean((propwt + .4)^2)
+    ),
+    by = scenario]
+# rf-----------------------------
+emp_rf_wt <- 
+  wt_rf %>% 
+  .[,
+    .(
+      estimate_rf = mean(propwt),
+      bias_rf = mean(abs(propwt)) + .4,
+      sd_rf = sd(propwt),
+      mse_rf = mean((propwt + .4)^2)
+    ),
+    by = scenario]
+# svm (lin)---------------------------
+emp_svm_lin_wt <- 
+  wt_svm_lin %>% 
+  .[,
+    .(
+      estimate_svmlin = mean(propwt),
+      bias_svmlin = mean(abs(propwt)) + .4,
+      sd_svmlin = sd(propwt),
+      mse_svmlin = mean((propwt + .4)^2)
+    ),
+    by = scenario]
+# svm---------------------------
+emp_svm_wt <- 
+  wt_svm %>% 
+  .[,
+    .(
+      estimate_svm = mean(propwt),
+      bias_svm = mean(abs(propwt)) + .4,
+      sd_svm = sd(propwt),
+      mse_svm = mean((propwt + .4)^2)
+    ),
+    by = scenario]
+# merge------------------------
+emp_tab_wt <-
+  emp_logit_wt %>%
+  merge(emp_rf_wt, by = "scenario") %>%
+  merge(emp_svm_lin_wt, by = "scenario") %>%
+  merge(emp_svm_wt, by = "scenario") %>%
+  melt(id.vars = "scenario") %>%
+  .[,
+    c("emp", "model") := tstrsplit(variable, "_", fixed = TRUE)] %>% 
+  .[,
+    variable := NULL] %>% 
+  dcast(emp + scenario ~ model)
+```
+
+The pattern of propensity score affects estimation of effect. See Figure \@ref(fig:iptwhist) and Figure \@ref(fig:weighthist). Appendix \@ref(numresult) gives each performance metric.
+
+# Conclusion {#conclusion}
+
+In this work, we compare propensity score weighting based on logistic regression with random forests or SVM. Random forests gave too extreme propensity score. We cannot give responsibility for random forest method of this because we skipped model selection step. On the other hand, SVM worked quite well.
+
+As future studies, we need to try parameter selection and IPW-SIPW comparison. As mentioned in Section \@ref(asam), empirical distribution of ASAM might be good insight for this subject.
 
 \newpage
 
@@ -115,15 +544,66 @@ library(propensityml)
 
 # (APPENDIX) Appendix {-}
 
-```{r get-labels, include=FALSE}
-lbs <- knitr::all_labels()
-lbs <- setdiff(lbs, c("setup", "get-labels", "pkgs"))
+# Appendix: Tables {#numresult}
+
+Large tables for effect estimators.
+
+```{r, iptwemptab, echo=FALSE, results='asis'}
+emp_tab_iptw %>%
+  kable(
+    format = "latex",
+    col.names = c("Metric", "Scenarios", "Logistic regression", "Random forests", "SVM (Linear)", "SVM (Radial)"),
+    escape = FALSE,
+    caption = "Performance metic of IPTW"
+  ) %>%
+  kable_styling("striped", full_width = FALSE, latex_options = c("HOLD_position", "scale_down"), font_size = 5) %>%
+  add_header_above(c(" " = 1, " " = 1, "Model" = 4)) %>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+```{r, wtemptab, echo=FALSE, results='asis'}
+emp_tab_wt %>%
+  kable(
+    format = "latex",
+    col.names = c("Metric", "Scenarios", "Logistic regression", "Random forests", "SVM (Linear)", "SVM (Radial)"),
+    escape = FALSE,
+    caption = "Performance Metric of ATC Estimation"
+  ) %>%
+  kable_styling("striped", full_width = FALSE, latex_options = c("HOLD_position", "scale_down"), font_size = 5) %>%
+  add_header_above(c(" " = 1, " " = 1, "Model" = 4)) %>%
+  collapse_rows(columns = 1, valign = "top")
 ```
 
 # Appendix: Codes
+
+```{r get-labels, include=FALSE}
+lbs <- knitr::all_labels()
+lbs <- setdiff(lbs, c("setup", "get-labels", "pkgs"))
+lbs_echo <- str_subset(lbs, pattern = "^ml")
+lbs_tab <- str_subset(lbs, pattern = "tab$")
+lbs_fig <- str_subset(lbs, pattern = "emp$|hist$")
+```
 
 ## Loading Packages
 
 ```{r ref.label="pkgs", echo=TRUE, eval=FALSE}
 ```
+
+## De-echoed Codes
+
+```{r ref.label=lbs_echo, echo=TRUE, eval=FALSE}
+```
+
+## Knitting Figures
+
+```{r ref.label=lbs_fig, echo=TRUE, eval=FALSE}
+```
+
+## Knitting Tables
+
+```{r ref.label=lbs_tab, echo=TRUE, eval=FALSE}
+```
+
+
+
 
